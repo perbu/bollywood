@@ -39,7 +39,6 @@ func TestEngine_Send(t *testing.T) {
 	if b.noOfCakes != 1 {
 		t.Fatal("wrong number of cakes, expected 1 got", b.noOfCakes)
 	}
-
 }
 
 func TestEngine_Deadletter(t *testing.T) {
@@ -56,6 +55,24 @@ func TestEngine_Deadletter(t *testing.T) {
 		t.Fatal("wrong number of messages in deadletter, expected 1 got", len(d.GetMessages()))
 	}
 	e.Shutdown()
+
+}
+
+func BenchmarkEngine_Send(b *testing.B) {
+	e := bollywood.NewEngine()
+	err := e.Spawn("assistant", &assistant{}, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	a, ok := e.GetActor("assistant")
+	if !ok {
+		b.Fatal("actor assistant not found")
+	}
+	b.ResetTimer()
+	// lets send it a lot of messages
+	for i := 0; i < b.N; i++ {
+		e.Send(a, helpBake{"cake"}, nil)
+	}
 
 }
 
@@ -104,12 +121,9 @@ type assistant struct {
 func (a *assistant) Receive(msg bollywood.Message) {
 	switch msg.Message.(type) {
 	case bollywood.ActorStarted:
-		fmt.Println("ActorStarted assistant")
 	case bollywood.ActorStopped:
-		fmt.Println("ActorStopped assistant")
 		break
 	case helpBake:
 		a.helps++
-		fmt.Println("helping to bake", msg.Message.(helpBake).what)
 	}
 }
