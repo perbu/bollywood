@@ -30,5 +30,7 @@ do support networking, limiting the actors to work within a single process.
 ```
 See the tests for usage
 
+## What about a real Actor Model implementation in Go?
 
+Please see [Hollywood](https://github.com/anthdm/hollywood) for a more complete implementation of the Actor Model in Go. 
 
