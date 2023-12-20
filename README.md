@@ -1,8 +1,10 @@
 # Bollywood
 
-Bollywood a super simplistic actor model framework. I wrote this to get an idea how 
-an actor model could be implemented in Go. It is not meant to be used in production and doesn't
-do support networking, limiting the actors to work within a single process.
+Bollywood a simplistic actor model framework. I wrote this to get an idea how 
+an actor model could be implemented in Go. 
+
+It is not meant to be used in production and doesn't  do support networking, limiting the actors to work within a 
+single process.
 
 
 ## Usage

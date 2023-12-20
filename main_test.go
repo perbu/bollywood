@@ -16,8 +16,8 @@ func TestEngine_Send(t *testing.T) {
 	}
 	// grab the newly spawned actor
 	a, ok := e.GetActor("baker")
-	if ok {
-		t.Fatal("actor baker not found")
+	if !ok {
+		t.Fatal("actor 'baker' not found")
 	}
 	// cast the implementation to the baker struct so we can access the done waitgroup and the data
 	b := a.Implementation.(*baker)
@@ -86,7 +86,7 @@ type bakeBread struct{}
 type bakeCake struct{}
 
 func (b *baker) Receive(msg bollywood.Message) {
-	switch msg.Message.(type) {
+	switch msg.Payload.(type) {
 	case bollywood.ActorStarted:
 		fmt.Println("ActorStarted baker, spawning assistant")
 		err := msg.Engine.Spawn("assistant", &assistant{}, msg.Sender)
@@ -119,7 +119,7 @@ type assistant struct {
 }
 
 func (a *assistant) Receive(msg bollywood.Message) {
-	switch msg.Message.(type) {
+	switch msg.Payload.(type) {
 	case bollywood.ActorStarted:
 	case bollywood.ActorStopped:
 		break
