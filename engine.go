@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+type Engine struct {
+	registry *Registry
+}
+
 func NewEngine() *Engine {
 	e := &Engine{
 		registry: &Registry{

@@ -1,6 +1,15 @@
 package bollywood
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
+
+type actorMap map[string]*Actor
+type Registry struct {
+	actors actorMap
+	mu     sync.RWMutex
+}
 
 func (r *Registry) register(name string, a *Actor) bool {
 	r.mu.Lock()

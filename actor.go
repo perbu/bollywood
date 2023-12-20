@@ -5,6 +5,11 @@ import (
 	"sync/atomic"
 )
 
+// ActorInterface is the interface that must be implemented by all actors.
+type ActorInterface interface {
+	Receive(message Message)
+}
+
 type Actor struct {
 	Id             string
 	Implementation ActorInterface
