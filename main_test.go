@@ -19,18 +19,17 @@ func TestEngine_Send(t *testing.T) {
 	if !ok {
 		t.Fatal("actor 'baker' not found")
 	}
-	// cast the implementation to the baker struct so we can access the done waitgroup and the data
+	// cast the implementation to the baker struct so, we can access the done waitgroup and the data
 	b := a.Implementation.(*baker)
-	e.SendByName("baker", bakeBread{}, nil)
-	e.SendByName("baker", bakeBread{}, nil)
-	e.SendByName("baker", bakeCake{}, nil)
-	e.StopByName("baker").Wait()
+	e.Send("baker", bakeBread{}, nil)
+	e.Send("baker", bakeBread{}, nil)
+	e.Send("baker", bakeCake{}, nil)
+	e.Stop("baker").Wait()
 	if err != nil {
 		t.Fatal(err)
 	}
 	b.done.Wait()
 	fmt.Println("send ok")
-	e.Shutdown()
 
 	// check the results. We should have 2 breads and 1 cake
 	if b.noOfBread != 2 {
@@ -43,18 +42,17 @@ func TestEngine_Send(t *testing.T) {
 
 func TestEngine_Deadletter(t *testing.T) {
 	e := bollywood.NewEngine()
-	e.SendByName("baker", bakeBread{}, nil)
+	e.Send("baker", bakeBread{}, nil)
 	time.Sleep(time.Millisecond)
 	dl, ok := e.GetActor("deadletter")
 	if !ok {
 		t.Fatal("deadletter actor not found")
 	}
-	// cast the implementation to the deadletter struct so we can access the data
+	// cast the implementation to the deadletter struct so, we can access the data
 	d := dl.Implementation.(*bollywood.DeadLetter)
 	if len(d.GetMessages()) != 1 {
 		t.Fatal("wrong number of messages in deadletter, expected 1 got", len(d.GetMessages()))
 	}
-	e.Shutdown()
 
 }
 
@@ -71,7 +69,7 @@ func BenchmarkEngine_Send(b *testing.B) {
 	b.ResetTimer()
 	// lets send it a lot of messages
 	for i := 0; i < b.N; i++ {
-		e.Send(a, helpBake{"cake"}, nil)
+		e.Send("assistant", helpBake{"cake"}, a)
 	}
 
 }
@@ -85,8 +83,8 @@ type baker struct {
 type bakeBread struct{}
 type bakeCake struct{}
 
-func (b *baker) Receive(msg bollywood.Message) {
-	switch msg.Payload.(type) {
+func (b *baker) Receive(msg bollywood.Envelope) {
+	switch msg.Message.(type) {
 	case bollywood.ActorStarted:
 		fmt.Println("ActorStarted baker, spawning assistant")
 		err := msg.Engine.Spawn("assistant", &assistant{}, msg.Sender)
@@ -96,15 +94,15 @@ func (b *baker) Receive(msg bollywood.Message) {
 		b.done.Add(1)
 	case bollywood.ActorStopped:
 		fmt.Println("ActorStopped baker, stopping assistant")
-		msg.Engine.StopByName("assistant").Wait()
+		msg.Engine.Stop("assistant").Wait()
 		defer b.done.Done()
 		break
 	case bakeCake:
-		msg.Engine.SendByName("assistant", helpBake{"cake"}, msg.Sender)
+		msg.Engine.Send("assistant", helpBake{"cake"}, msg.Sender)
 		b.noOfCakes++
 		fmt.Println("baked a cake, we now have ", b.noOfCakes, " cakes")
 	case bakeBread:
-		msg.Engine.SendByName("assistant", helpBake{"bread"}, msg.Sender)
+		msg.Engine.Send("assistant", helpBake{"bread"}, msg.Sender)
 		b.noOfBread++
 		fmt.Println("baked a bread, we now have ", b.noOfBread, " breads")
 	}
@@ -118,8 +116,8 @@ type assistant struct {
 	helps int
 }
 
-func (a *assistant) Receive(msg bollywood.Message) {
-	switch msg.Payload.(type) {
+func (a *assistant) Receive(msg bollywood.Envelope) {
+	switch msg.Message.(type) {
 	case bollywood.ActorStarted:
 	case bollywood.ActorStopped:
 		break

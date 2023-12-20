@@ -7,14 +7,14 @@ import (
 
 // ActorInterface is the interface that must be implemented by all actors.
 type ActorInterface interface {
-	Receive(message Message)
+	Receive(message Envelope)
 }
 
 type Actor struct {
 	Id             string
 	Implementation ActorInterface
 	Parent         *Actor
-	recvCh         chan Message
+	recvCh         chan Envelope
 	stopped        atomic.Bool
 	wg             *sync.WaitGroup // used to wait for actor to stop
 }

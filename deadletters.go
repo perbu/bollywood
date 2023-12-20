@@ -6,11 +6,11 @@ import (
 )
 
 type DeadLetter struct {
-	messages []Message
+	messages []Envelope
 }
 
-func (d *DeadLetter) Receive(msg Message) {
-	switch msg.Payload.(type) {
+func (d *DeadLetter) Receive(msg Envelope) {
+	switch msg.Message.(type) {
 	case ActorStarted:
 	case ActorStopped:
 	default:
@@ -22,11 +22,11 @@ func (d *DeadLetter) Receive(msg Message) {
 			sender = msg.Sender.Id
 		}
 		slog.Warn("dead letter", "sender", sender, "target", msg.Target, "type",
-			reflect.TypeOf(msg.Payload).String())
+			reflect.TypeOf(msg.Message).String())
 		d.messages = append(d.messages, msg)
 	}
 }
 
-func (d *DeadLetter) GetMessages() []Message {
+func (d *DeadLetter) GetMessages() []Envelope {
 	return d.messages
 }

@@ -28,20 +28,20 @@ func (e *Engine) Spawn(id string, actor ActorInterface, parent *Actor) error {
 	newActor := &Actor{
 		Id:             id,
 		Implementation: actor,
-		recvCh:         make(chan Message),
+		recvCh:         make(chan Envelope),
 		Parent:         parent,
 		wg:             wg,
 	}
 	newActor.stopped.Store(false)
 	ok := e.registry.register(id, newActor)
 	if !ok {
-		return fmt.Errorf("an actor with that ID already exists")
+		return &DuplicateActorError{Id: id}
 	}
 	// spawn the actor
 	go func(a *Actor) { // == actor goroutine ==
 		// send started message
-		actor.Receive(Message{
-			Payload: ActorStarted{},
+		actor.Receive(Envelope{
+			Message: ActorStarted{},
 			Engine:  e,
 			Sender:  nil, // system message have no sender
 		})
@@ -50,15 +50,15 @@ func (e *Engine) Spawn(id string, actor ActorInterface, parent *Actor) error {
 			actor.Receive(msg)
 		}
 		// actor is done
-		actor.Receive(Message{
-			Payload: ActorStopped{},
+		actor.Receive(Envelope{
+			Message: ActorStopped{},
 			Engine:  e,
 			Sender:  nil, // system message have no sender
 		})
 		// unregister the actor
 		err := e.registry.unregister(id)
 		if err != nil {
-			fmt.Printf("ERROR: unregister %s: %s", id, err)
+			panic(err)
 		}
 		a.wg.Done() // signal that the actor is done
 		// at this point
@@ -66,16 +66,11 @@ func (e *Engine) Spawn(id string, actor ActorInterface, parent *Actor) error {
 	return nil
 }
 
-func (e *Engine) StopByName(name string) *sync.WaitGroup {
+func (e *Engine) Stop(name string) *sync.WaitGroup {
 	a, ok := e.registry.get(name)
 	if !ok {
-		fmt.Printf("ERROR(StopByName): actor %s not found\n", name)
 		return &sync.WaitGroup{}
 	}
-	return e.Stop(a)
-}
-
-func (e *Engine) Stop(a *Actor) *sync.WaitGroup {
 	if !a.stopped.Load() {
 		close(a.recvCh)
 		a.stopped.Store(true)
@@ -85,37 +80,20 @@ func (e *Engine) Stop(a *Actor) *sync.WaitGroup {
 	return a.wg
 }
 
-func (e *Engine) SendByName(target string, msg any, sender *Actor) {
+func (e *Engine) Send(target string, msg any, sender *Actor) {
 	a, ok := e.registry.get(target)
 	if !ok {
-		e.SendByName("deadletter", msg, sender)
+		e.Send("deadletter", msg, sender)
 		return
 	}
-	a.recvCh <- Message{
-		Payload: msg,
+	a.recvCh <- Envelope{
+		Target:  a,
+		Message: msg,
 		Engine:  e,
 		Sender:  sender,
 	}
-}
-func (e *Engine) Send(target *Actor, msg any, sender *Actor) {
-	target.recvCh <- Message{
-		Payload: msg,
-		Engine:  e,
-		Sender:  sender,
-		Target:  target,
-	}
-	return
 }
 
 func (e *Engine) GetActor(name string) (*Actor, bool) {
 	return e.registry.get(name)
-}
-
-func (e *Engine) Shutdown() {
-	// stop all actors
-	for _, a := range e.registry.getAll() {
-		e.Stop(a).Wait()
-	}
-	// stop the deadletter actor
-	e.StopByName("deadletter").Wait()
 }
